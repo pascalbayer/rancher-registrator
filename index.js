@@ -248,21 +248,18 @@ function checkForInternalPortMapping (input) {
                         reject("Error retrieving internal exposed ports: " + exception);
                     }
 
-                    console.log(containerDetails);
-
-                    for (let env of containerDetails.Config.Env) {
+                    for (let port in containerDetails.Config.ExposedPorts) {
                         try {
-                            let matchedValues = env.match(/SERVICE_([0-9]{1,4})?_?NAME=([a-zA-Z0-9\-_@]+)/);
+                            if (port.match(/[0-9]+\/tcp|udp/)) {
+                                let split = port.split('/');
 
-                            if (matchedValues) {
-                                const servicePort = parseInt(matchedValues[1], 10);
                                 const ip = input.metadata.hostIP;
 
                                 input.metadata.portMapping.push({
                                     address: ip,
-                                    publicPort: servicePort,
-                                    privatePort: servicePort,
-                                    transport: 'tcp'
+                                    publicPort: split[0],
+                                    privatePort: split[0],
+                                    transport: split[1]
                                 });
                             }
                         }
