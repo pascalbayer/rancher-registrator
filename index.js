@@ -248,24 +248,34 @@ function checkForInternalPortMapping (input) {
                         reject("Error retrieving internal exposed ports: " + exception);
                     }
 
-                    for (let port in containerDetails.Config.ExposedPorts) {
-                        try {
-                            if (port.match(/[0-9]+\/tcp|udp/)) {
-                                let split = port.split('/');
+                    if (Object.keys(containerDetails.Config.ExposedPorts).length > 0) {
+                        for (let port in containerDetails.Config.ExposedPorts) {
+                            try {
+                                if (port.match(/[0-9]+\/tcp|udp/)) {
+                                    let split = port.split('/');
 
-                                const ip = input.metadata.hostIP;
+                                    const ip = input.metadata.hostIP;
 
-                                input.metadata.portMapping.push({
-                                    address: ip,
-                                    publicPort: split[0],
-                                    privatePort: split[0],
-                                    transport: split[1]
-                                });
+                                    input.metadata.portMapping.push({
+                                        address: ip,
+                                        publicPort: split[0],
+                                        privatePort: split[0],
+                                        transport: split[1]
+                                    });
+                                }
+                                else {
+
+                                }
+                            }
+                            catch (exception) {
+                                reject("Error retrieving internal exposed ports: " + exception);
                             }
                         }
-                        catch (exception) {
-                            reject("Error retrieving internal exposed ports: " + exception);
-                        }
+
+                        resolve(input);
+                    }
+                    else {
+                        reject("No internally exposed ports for " + input.servicename)
                     }
                 });
             }
