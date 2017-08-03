@@ -1,9 +1,10 @@
 var async = require('async');
 var request = require('request');
 var DockerEvents = require('docker-events'),
-    Dockerode = require('dockerode')
+    Dockerode = require('dockerode');
+var docker = new Dockerode({socketPath: '/var/run/docker.sock'})
 var emitter = new DockerEvents({
-    docker: new Dockerode({socketPath: '/var/run/docker.sock'}),
+    docker: docker,
 });
 var jsonQuery = require('json-query')
 
@@ -128,6 +129,7 @@ function tryRegisterContainer(input){
         })
         .then(getAgentIP)
         .then(checkForPortMapping)
+        .then(checkForInternalPortMapping)
         .then(checkForServiceIgnoreLabel)
         .then(checkForServiceNameLabel)
         .then(checkForServiceTagsLabel)
@@ -230,6 +232,46 @@ function checkForPortMapping(input){
             else
             {
                 reject("No port mappings for " + input.servicename)
+            }
+        }
+    )
+}
+
+function checkForInternalPortMapping (input) {
+    return new Promise(
+        function (resolve, reject) {
+            try {
+                var container = docker.getContainer(input.metadata.external_id);
+
+                container.inspect(function (error, containerDetails) {
+                    if (error) {
+                        reject("Error retrieving internal exposed ports: " + exception);
+                    }
+
+                    for (let env of containerDetails.Config.Env) {
+                        try {
+                            let matchedValues = env.match(/SERVICE_([0-9]{1,4})?_?NAME=([a-zA-Z0-9\-_@]+)/);
+
+                            if (matchedValues) {
+                                const servicePort = parseInt(matchedValues[1], 10);
+                                const ip = input.metadata.hostIP;
+
+                                input.metadata.portMapping.push({
+                                    address: ip,
+                                    publicPort: servicePort,
+                                    privatePort: servicePort,
+                                    transport: 'tcp'
+                                });
+                            }
+                        }
+                        catch (exception) {
+                            reject("Error retrieving internal exposed ports: " + exception);
+                        }
+                    }
+                });
+            }
+            catch (exception) {
+                reject("Error retrieving internal exposed ports: " + exception);
             }
         }
     )
