@@ -248,6 +248,8 @@ function checkForInternalPortMapping (input) {
                         reject("Error retrieving internal exposed ports: " + exception);
                     }
 
+                    console.log(containerDetails);
+
                     for (let env of containerDetails.Config.Env) {
                         try {
                             let matchedValues = env.match(/SERVICE_([0-9]{1,4})?_?NAME=([a-zA-Z0-9\-_@]+)/);
